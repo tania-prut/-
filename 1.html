@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Координати, відстані та бенчмарки</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Полярні та Декартові координати (2D)</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Полярні координати (r, θ)</th>
+            <th>Декартові координати (x, y)</th>
+            <th>Знову Полярні (r', θ')</th>
+            <th>Коректність</th>
+        </tr>
+    </thead>
+    <tbody id="results-2d"></tbody>
+</table>
+
+<h1>Сферичні та Декартові координати (3D)</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Сферичні координати (r, θ, φ)</th>
+            <th>Декартові координати (x, y, z)</th>
+            <th>Знову Сферичні (r', θ', φ')</th>
+            <th>Коректність</th>
+        </tr>
+    </thead>
+    <tbody id="results-3d"></tbody>
+</table>
+
+<h1>Відстані між точками</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Точка 1 (r₁, θ₁, φ₁)</th>
+            <th>Точка 2 (r₂, θ₂, φ₂)</th>
+            <th>Відстань (Декартова)</th>
+            <th>Відстань (Велика коло)</th>
+        </tr>
+    </thead>
+    <tbody id="distances"></tbody>
+</table>
+
+<h1>Бенчмарки продуктивності</h1>
+<div id="benchmarks"></div>
+
+<script>
+    // Функції для полярних та декартових координат (2D)
+
+    function polarToCartesian(r, theta) {
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta);
+        return { x, y };
+    }
+
+    function cartesianToPolar(x, y) {
+        const r = Math.sqrt(x * x + y * y);
+        const theta = Math.atan2(y, x);
+        return { r, theta };
+    }
+
+    // Точки в полярних координатах (r, θ), де θ в радіанах
+    const polarPoints = [
+        { r: 5, theta: Math.PI / 6 },
+        { r: 3, theta: Math.PI / 4 },
+        { r: 7, theta: Math.PI / 3 }
+    ];
+
+    // Отримуємо таблицю для виводу результатів для 2D
+    const resultsTable2D = document.getElementById("results-2d");
+
+    polarPoints.forEach(point => {
+        const { r, theta } = point;
+
+        const cartesian = polarToCartesian(r, theta);
+        const reversePolar = cartesianToPolar(cartesian.x, cartesian.y);
+
+        const isCorrect = Math.abs(r - reversePolar.r) < 0.0001 && Math.abs(theta - reversePolar.theta) < 0.0001;
+        const correctness = isCorrect ? "Так" : "Ні";
+
+        const row = `
+            <tr>
+                <td>r = ${r.toFixed(2)}, θ = ${(theta * (180 / Math.PI)).toFixed(2)}°</td>
+                <td>x = ${cartesian.x.toFixed(2)}, y = ${cartesian.y.toFixed(2)}</td>
+                <td>r' = ${reversePolar.r.toFixed(2)}, θ' = ${(reversePolar.theta * (180 / Math.PI)).toFixed(2)}°</td>
+                <td>${correctness}</td>
+            </tr>
+        `;
+        resultsTable2D.insertAdjacentHTML("beforeend", row);
+    });
+
+    // Сферичні та Декартові координати для 3D
+
+    function sphericalToCartesian(r, theta, phi) {
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+        return { x, y, z };
+    }
+
+    function cartesianToSpherical(x, y, z) {
+        const r = Math.sqrt(x * x + y * y + z * z);
+        const theta = Math.atan2(y, x);
+        const phi = Math.acos(z / r);
+        return { r, theta, phi };
+    }
+
+    // Формули для розрахунку відстаней
+
+    // 1. Декартова відстань у тривимірному просторі
+    function cartesianDistance(p1, p2) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dz = p2.z - p1.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    // 2. Велика колова відстань між двома точками на сфері (по поверхні)
+    function greatCircleDistance(r, theta1, phi1, theta2, phi2) {
+        const deltaTheta = theta2 - theta1;
+        const deltaPhi = phi2 - phi1;
+        const a = Math.sin(deltaPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaTheta / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return r * c;
+    }
+
+    // Точки у сферичних координатах
+    const sphericalPoints = [
+        { r: 5, theta: Math.PI / 6, phi: Math.PI / 4 },
+        { r: 7, theta: Math.PI / 4, phi: Math.PI / 3 },
+        { r: 4, theta: Math.PI / 3, phi: Math.PI / 6 }
+    ];
+
+    // Отримуємо таблицю для виводу результатів для 3D
+    const resultsTable3D = document.getElementById("results-3d");
+
+    sphericalPoints.forEach(point => {
+        const { r, theta, phi } = point;
+
+        const cartesian = sphericalToCartesian(r, theta, phi);
+        const reverseSpherical = cartesianToSpherical(cartesian.x, cartesian.y, cartesian.z);
+
+        const isCorrect = Math.abs(r - reverseSpherical.r) < 0.0001 &&
+                          Math.abs(theta - reverseSpherical.theta) < 0.0001 &&
+                          Math.abs(phi - reverseSpherical.phi) < 0.0001;
+        const correctness = isCorrect ? "Так" : "Ні";
+
+        const row = `
+            <tr>
+                <td>r = ${r.toFixed(2)}, θ = ${(theta * (180 / Math.PI)).toFixed(2)}°, φ = ${(phi * (180 / Math.PI)).toFixed(2)}°</td>
+                <td>x = ${cartesian.x.toFixed(2)}, y = ${cartesian.y.toFixed(2)}, z = ${cartesian.z.toFixed(2)}</td>
+                <td>r' = ${reverseSpherical.r.toFixed(2)}, θ' = ${(reverseSpherical.theta * (180 / Math.PI)).toFixed(2)}°, φ' = ${(reverseSpherical.phi * (180 / Math.PI)).toFixed(2)}°</td>
+                <td>${correctness}</td>
+            </tr>
+        `;
+        resultsTable3D.insertAdjacentHTML("beforeend", row);
+    });
+
+    // Таблиця для результатів відстаней
+    const distancesTable = document.getElementById("distances");
+
+    for (let i = 0; i < sphericalPoints.length - 1; i++) {
+        const p1 = sphericalPoints[i];
+        const p2 = sphericalPoints[i + 1];
+
+        const cartesianP1 = sphericalToCartesian(p1.r, p1.theta, p1.phi);
+        const cartesianP2 = sphericalToCartesian(p2.r, p2.theta, p2.phi);
+
+        const cartesianDist = cartesianDistance(cartesianP1, cartesianP2);
+        const greatCircleDist = greatCircleDistance(p1.r, p1.theta, p1.phi, p2.theta, p2.phi);
+
+        const row = `
+            <tr>
+                <td>r₁ = ${p1.r.toFixed(2)}, θ₁ = ${(p1.theta * (180 / Math.PI)).toFixed(2)}°, φ₁ = ${(p1.phi * (180 / Math.PI)).toFixed(2)}°</td>
+                <td>r₂ = ${p2.r.toFixed(2)}, θ₂ = ${(p2.theta * (180 / Math.PI)).toFixed(2)}°, φ₂ = ${(p2.phi * (180 / Math.PI)).toFixed(2)}°</td>
+                <td>${cartesianDist.toFixed(2)}</td>
+                <td>${greatCircleDist.toFixed(2)}</td>
+            </tr>
+        `;
+        distancesTable.insertAdjacentHTML("beforeend", row);
+    }
+
+    // Бенчмарки продуктивності
+
+    function benchmarkCartesianDistances(pairs) {
+        const start = performance.now();
+        pairs.forEach(pair => {
+            const dist = cartesianDistance(pair[0], pair[1]);
+        });
+        return performance.now() - start;
+    }
+
+    function benchmarkGreatCircleDistances(pairs) {
+        const start = performance.now();
+        pairs.forEach(pair => {
+            const dist = greatCircleDistance(pair.r, pair.theta1, pair.phi1, pair.theta2, pair.phi2);
+        });
+        return performance.now() - start;
+    }
+
+    function generateCartesianPairs(n) {
+        const pairs = [];
+        for (let i = 0; i < n; i++) {
+            const p1 = { x: Math.random() * 10, y: Math.random() * 10, z: Math.random() * 10 };
+            const p2 = { x: Math.random() * 10, y: Math.random() * 10, z: Math.random() * 10 };
+            pairs.push([p1, p2]);
+        }
+        return pairs;
+    }
+
+    function generateSphericalPairs(n) {
+        const pairs = [];
+        for (let i = 0; i < n; i++) {
+            const p1 = {
+                r: Math.random() * 10,
+                theta: Math.random() * Math.PI,
+                phi: Math.random() * Math.PI
+            };
+            const p2 = {
+                r: Math.random() * 10,
+                theta: Math.random() * Math.PI,
+                phi: Math.random() * Math.PI
+            };
+            pairs.push({
+                r: p1.r,
+                theta1: p1.theta,
+                phi1: p1.phi,
+                theta2: p2.theta,
+                phi2: p2.phi
+            });
+        }
+        return pairs;
+    }
+
+    const numPairs = 1000;
+
+    const cartesianPairs = generateCartesianPairs(numPairs);
+    const sphericalPairs = generateSphericalPairs(numPairs);
+
+    const cartesianTime = benchmarkCartesianDistances(cartesianPairs);
+    const greatCircleTime = benchmarkGreatCircleDistances(sphericalPairs);
+
+    const benchmarksDiv = document.getElementById("benchmarks");
+    benchmarksDiv.innerHTML = `
+        <p>Час розрахунку відстаней у декартовій системі: ${cartesianTime.toFixed(2)} мс для ${numPairs} пар точок.</p>
+        <p>Час розрахунку великої колової відстані: ${greatCircleTime.toFixed(2)} мс для ${numPairs} пар точок.</p>
+    `;
+</script>
+
+</body>
+</html>
